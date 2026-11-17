@@ -6,3 +6,4 @@ google-auth-oauthlib>=1.2
 edge-tts>=7.0
 pillow>=10.0
 requests>=2.31
+gTTS>=2.5

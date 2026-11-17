@@ -62,5 +62,22 @@ def run_check() -> bool:
         except Exception as e:
             ok = False
             print(f"  FAIL  {e}")
+    print("=== 5. Voice ===")
+    try:
+        import tempfile
+        from pathlib import Path
+        from lm import voice
+        from lm.common import load_config
+        out = Path(tempfile.mkdtemp()) / "t.mp3"
+        voice._edge("This is a short voice test for LogikMedia.", out, "en-US-AndrewNeural", "+5%")
+        print(f"  OK  edge-tts ({out.stat().st_size} bytes)")
+    except Exception as e:
+        print(f"  WARN  edge-tts failed: {e!r}")
+        try:
+            voice._gtts("This is a short voice test.", out)
+            print("  OK  Google TTS fallback works")
+        except Exception as e2:
+            ok = False
+            print(f"  FAIL  no free voice works: {e2!r}")
     print("\nRESULT:", "ALL GOOD — run 'Produce video' now." if ok else "Something is missing — see above.")
     return ok
