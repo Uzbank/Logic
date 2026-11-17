@@ -37,7 +37,8 @@ def _free(text: str, out: Path, v: dict) -> None:
     """edge-tts with retries and a backup voice, then Google TTS as last resort."""
     import time
     text = _clean(text)
-    attempts = [(v["edge_voice"], v["edge_rate"]), (v["edge_voice"], "+0%"), ("en-US-GuyNeural", "+0%")]
+    # keep the same voice across the whole video: retry it patiently before any switch
+    attempts = [(v["edge_voice"], v["edge_rate"])] * 3 + [(v["edge_voice"], "+0%")] * 3 + [("en-US-GuyNeural", "+0%")]
     for i, (voice, rate) in enumerate(attempts):
         try:
             _edge(text, out, voice, rate)
@@ -45,7 +46,7 @@ def _free(text: str, out: Path, v: dict) -> None:
                 return
         except Exception as e:
             log(f"edge-tts attempt {i + 1} failed ({voice}): {e}")
-        time.sleep(3 * (i + 1))
+        time.sleep(min(30, 5 * (i + 1)))
     log("edge-tts unavailable, using Google TTS fallback")
     _gtts(text, out)
 
