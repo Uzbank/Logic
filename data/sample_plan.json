@@ -1,0 +1,16 @@
+{
+  "topic": "Free AI receptionist tools for small businesses",
+  "why_now": "Sample plan used for --dry-run tests only.",
+  "title": "I Compared 3 AI Receptionists for Small Business (2026)",
+  "thumbnail_text": "AI Answers Your Phone",
+  "hook": "Missed calls cost a small business real money. Here is what AI receptionists can and cannot do in 2026.",
+  "sections": [
+    {"heading": "Missed calls cost you money", "bullets": ["Most callers don't leave voicemail", "AI can answer 24/7", "But not every tool is worth it"], "narration": "Missed calls cost a small business real money. Most callers who hit voicemail simply hang up and call the next company. In this sample section we test the pipeline, not real tools."},
+    {"heading": "What an AI receptionist does", "bullets": ["Answers and qualifies callers", "Books into your calendar", "Sends you a summary text"], "narration": "An AI receptionist answers the phone, asks a few qualifying questions, books an appointment into your calendar and texts you a summary. That is the promise. Let's see what it costs."},
+    {"heading": "The simple cost math", "bullets": ["Price per month vs per minute", "Compare to one lost job", "Break-even in one booking"], "narration": "Here is the simple math. If one extra booking a month pays for the tool, it is worth testing. If your calls are mostly existing customers, it probably is not."},
+    {"heading": "Verdict", "bullets": ["Use it: service businesses", "Skip it: low call volume", "Start with a free trial"], "narration": "My verdict. Service businesses that live on the phone should test one. If you get three calls a week, skip it. Tell me in the comments what your business does, and subscribe for more honest AI tool breakdowns."}
+  ],
+  "description": "Sample description.\n\nSources:\n- https://example.com\n\n#AI #SmallBusiness #LogikMedia",
+  "tags": ["AI receptionist", "AI for small business"],
+  "sources": ["https://example.com"]
+}
