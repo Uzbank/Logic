@@ -16,6 +16,11 @@ seed_keywords = [
 # Words per video narration. ~150 words = 1 minute. 1200 words ≈ 8 min.
 target_words = 1200
 
+[content]
+# "battle" = AI vs AI / prompt vs prompt with real answers on screen (default)
+# "explainer" = the older narrated-slides format
+format = "battle"
+
 [schedule]
 # Publish slots (US Eastern time). The pipeline picks the next free one.
 timezone = "America/New_York"
@@ -54,3 +59,68 @@ bg2 = "#0A1A3A"
 accent = "#22D3EE"    # cyan
 text = "#FFFFFF"
 muted = "#A9B8D6"
+
+[battle]
+mode = "auto"            # "models", "prompts" or "auto" (writer picks)
+target_words = 1000      # narration length (~7 min)
+max_contestants = 3
+
+# Cross-company battles: a contestant is used only if its API key secret exists
+# (ANTHROPIC_API_KEY / GEMINI_API_KEY / OPENAI_API_KEY). Prices are USD per 1M tokens.
+# Model names and prices change often: check them before adding a key.
+[[battle.contestants]]
+name = "Claude Sonnet 5.5"
+provider = "anthropic"
+model = "claude-sonnet-5-5"
+tag = "Anthropic"
+price_in = 2.0
+price_out = 10.0
+
+[[battle.contestants]]
+name = "Gemini Flash"
+provider = "gemini"
+model = "gemini-2.5-flash"
+tag = "Google"
+price_in = 0.30
+price_out = 2.50
+
+[[battle.contestants]]
+name = "ChatGPT mini"
+provider = "openai"
+model = "gpt-5-mini"
+tag = "OpenAI"
+price_in = 0.25
+price_out = 2.0
+
+# Used when keys for only one company exist: cheap vs mid vs premium.
+[[battle.fallback_contestants]]
+name = "Claude Haiku 5.5"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+tag = "Budget model"
+price_in = 0.10
+price_out = 0.50
+
+[[battle.fallback_contestants]]
+name = "Claude Sonnet 5.5"
+provider = "anthropic"
+model = "claude-sonnet-5-5"
+tag = "Mid-range model"
+price_in = 2.0
+price_out = 10.0
+
+[[battle.fallback_contestants]]
+name = "Claude Opus 5.5"
+provider = "anthropic"
+model = "claude-opus-5-5"
+tag = "Premium model"
+price_in = 4.0
+price_out = 20.0
+
+[battle.prompt_mode_model]
+name = "Claude Haiku 5.5"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+tag = "Budget model"
+price_in = 0.10
+price_out = 0.50

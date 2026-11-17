@@ -24,8 +24,60 @@ def sample_plan() -> dict:
     return json.loads((ROOT / "data" / "sample_plan.json").read_text(encoding="utf-8"))
 
 
+def publish(cfg: dict, video: Path, thumb: Path, plan: dict, used: list, stamp: str) -> None:
+    from lm import youtube
+    yt = youtube.client()
+    slot = next_publish_slot(cfg)
+    mode = cfg["review"]["mode"]
+    if mode == "opt_in" and not telegram.enabled():
+        log("review.mode=opt_in but Telegram is not configured: video will stay private until you publish it in Studio")
+    vid = youtube.upload(yt, video, thumb, plan, cfg, publish_at=None if mode == "opt_in" else slot)
+    if telegram.enabled() and mode != "off":
+        telegram.send_review(vid, plan, thumb, slot, mode)
+    used.append({"topic": plan["topic"], "title": plan["title"], "video_id": vid, "date": stamp})
+    write_json(USED, used)
+
+
+def produce_battle(dry_run: bool, upload: bool) -> None:
+    from lm import episode
+    cfg = load_config()
+    used = read_json(USED, [])
+    stamp = datetime.now().strftime("%Y%m%d-%H%M")
+    work = OUT / stamp
+    work.mkdir(parents=True, exist_ok=True)
+    if dry_run:
+        data = json.loads((ROOT / "data" / "sample_battle.json").read_text(encoding="utf-8"))
+        mode, contestants, rounds, talk, topic = data["mode"], data["contestants"], data["rounds"], data["talk"], data["topic"]
+    else:
+        from lm import battle, youtube
+        contestants = battle.available_contestants(cfg)
+        titles = []
+        try:
+            titles = [v["title"] for v in youtube.niche_snapshot(youtube.client(), cfg["channel"]["seed_keywords"])]
+        except SystemExit:
+            log("No YouTube credentials: skipping niche snapshot")
+        p = battle.plan(cfg, contestants, [u["topic"] for u in used], titles)
+        rounds = battle.run_battle(cfg, p, contestants)
+        write_json(work / "battle.json", {"plan": p.model_dump(), "rounds": rounds})
+        talk = battle.commentary(cfg, p, contestants, rounds).model_dump()
+        mode, topic = p.mode, p.topic
+    write_json(work / "talk.json", talk)
+    scene_list = episode.build_scenes(mode, contestants, rounds, talk)
+    video = episode.produce_video(work, scene_list, cfg, dry_run)
+    thumb = work / "thumbnail.png"
+    episode.thumbnail(thumb, talk["thumbnail_text"], [c["name"] for c in rounds[0]["columns"]], cfg)
+    plan = {"topic": topic, "title": talk["title"], "description": talk["description"], "tags": talk["tags"],
+            "why_now": f"AI battle: {topic}"}
+    if dry_run or not upload:
+        log(f"Done (not uploaded). Files in {work}")
+        return
+    publish(cfg, video, thumb, plan, used, stamp)
+
+
 def produce(dry_run: bool, upload: bool) -> None:
     cfg = load_config()
+    if cfg.get("content", {}).get("format", "battle") == "battle":
+        return produce_battle(dry_run, upload)
     used = read_json(USED, [])
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
     work = OUT / stamp
@@ -65,17 +117,7 @@ def produce(dry_run: bool, upload: bool) -> None:
         return
 
     # 6. Upload + schedule + human check
-    from lm import youtube
-    yt = youtube.client()
-    slot = next_publish_slot(cfg)
-    mode = cfg["review"]["mode"]
-    if mode == "opt_in" and not telegram.enabled():
-        log("review.mode=opt_in but Telegram is not configured: video will stay private until you publish it in Studio")
-    vid = youtube.upload(yt, video, thumb, plan, cfg, publish_at=None if mode == "opt_in" else slot)
-    if telegram.enabled() and mode != "off":
-        telegram.send_review(vid, plan, thumb, slot, mode)
-    used.append({"topic": plan["topic"], "title": plan["title"], "video_id": vid, "date": stamp})
-    write_json(USED, used)
+    publish(cfg, video, thumb, plan, used, stamp)
 
 
 def review() -> None:

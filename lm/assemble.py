@@ -95,3 +95,69 @@ def build(work: Path, slides: list[Path], audios: list[Path], narrations: list[s
          "-shortest", "-movflags", "+faststart", str(out)])
     log(f"Final video: {out} ({media_duration(out) / 60:.1f} min)")
     return out
+
+
+def _whoosh(work: Path) -> Path:
+    w = work / "whoosh.wav"
+    if not w.exists():
+        run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anoisesrc=d=0.45:c=pink:a=0.6", "-af",
+             "highpass=f=400,lowpass=f=6000,afade=t=in:d=0.15,afade=t=out:st=0.2:d=0.25,volume=0.5",
+             "-ar", "44100", "-ac", "2", str(w)])
+    return w
+
+
+def build_from_clips(work: Path, clips: list[Path], audios: list[Path], narrations: list[str], out: Path, cfg: dict) -> Path:
+    """Clips are already rendered to the right length. Voice starts 0.3s into each clip, with a whoosh on the cut."""
+    wh = _whoosh(work)
+    padded, durs = [], []
+    for i, (c, a) in enumerate(zip(clips, audios)):
+        L = media_duration(c)
+        p = work / f"mix_{i:02d}.wav"
+        run(["ffmpeg", "-y", "-i", str(a), "-i", str(wh), "-filter_complex",
+             f"[0:a]aresample=44100,aformat=channel_layouts=stereo,adelay=300|300,apad[v];"
+             f"[1:a]volume=0.6[w];[v][w]amix=inputs=2:duration=first:normalize=0,atrim=0:{L:.3f}[o]",
+             "-map", "[o]", "-ar", "44100", "-ac", "2", str(p)])
+        padded.append(p)
+        durs.append(L)
+    (work / "clips.txt").write_text("".join(f"file '{c.name}'\n" for c in clips))
+    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(work / "clips.txt"), "-c", "copy", str(work / "video_raw.mp4")])
+    (work / "voices.txt").write_text("".join(f"file '{p.name}'\n" for p in padded))
+    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(work / "voices.txt"), "-c", "copy", str(work / "voice.wav")])
+
+    # captions: offset each scene's narration by the 0.3s voice delay
+    lines, n, t0 = [], 1, 0.0
+    for text, L, a in zip(narrations, durs, audios):
+        parts = _chunks(text)
+        total = sum(len(p) for p in parts) or 1
+        speak = media_duration(a)
+        t = t0 + 0.3
+        for p in parts:
+            dt = speak * len(p) / total
+            lines.append(f"{n}\n{_ts(t)} --> {_ts(t + dt)}\n{p}\n")
+            n += 1
+            t += dt
+        t0 += L
+    srt = work / "captions.srt"
+    srt.write_text("\n".join(lines), encoding="utf-8")
+
+    inputs = ["-i", str(work / "video_raw.mp4"), "-i", str(work / "voice.wav")]
+    style = "FontName=Inter,FontSize=13,PrimaryColour=&H00FFFFFF,OutlineColour=&H90000000,BorderStyle=3,Outline=1,Shadow=0,MarginV=14"
+    vf = f"[0:v]subtitles={srt.as_posix()}:force_style='{style}'[v1]"
+    last = "v1"
+    wm = ASSETS / "watermark.png"
+    if wm.exists():
+        inputs += ["-i", str(wm)]
+        vf += f";[2:v]scale=90:90,format=rgba,colorchannelmixer=aa=0.7[wm];[{last}][wm]overlay=W-w-30:H-h-30[v2]"
+        last = "v2"
+    music = ASSETS / "music.mp3"
+    amap = "1:a"
+    if music.exists():
+        idx = 3 if wm.exists() else 2
+        inputs += ["-stream_loop", "-1", "-i", str(music)]
+        vf += f";[{idx}:a]volume=0.07[m];[1:a][m]amix=inputs=2:duration=first:normalize=0[a]"
+        amap = "[a]"
+    run(["ffmpeg", "-y", *inputs, "-filter_complex", vf, "-map", f"[{last}]", "-map", amap,
+         "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "aac", "-b:a", "192k",
+         "-shortest", "-movflags", "+faststart", str(out)])
+    log(f"Final video: {out} ({media_duration(out) / 60:.1f} min)")
+    return out
