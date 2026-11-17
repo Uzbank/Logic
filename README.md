@@ -37,6 +37,8 @@
 
 ## Созлаш қадамлари (~1 соат, бир марта)
 
+> Энг осон йўл (фақат браузер, Python'сиз): **[SETUP.md](SETUP.md)**. Қуйидагиси муқобил йўл.
+
 1. GitHub'да янги **private** репозиторий очинг (масалан `logikmedia-autopilot`) ва шу папкадаги ҳамма файлларни юкланг (`.github` папкаси билан бирга).
 2. Google Cloud: янги лойиҳа → "APIs & Services" → **YouTube Data API v3** ни Enable қилинг → "OAuth consent screen" (External, ўзингизни test user қилиб қўшинг, кейин **Publish app → In production**) → "Credentials" → Create OAuth client ID → **Desktop app** → JSON'ни `client_secret.json` деб юклаб олинг.
 3. Ўз компьютерингизда (Python 3.10+):

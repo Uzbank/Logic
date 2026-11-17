@@ -3,6 +3,7 @@
   python pipeline.py produce            # research -> script -> voice -> video -> upload -> Telegram check
   python pipeline.py produce --dry-run  # no API keys needed: sample script, silent voice, no upload
   python pipeline.py produce --no-upload
+  python pipeline.py check              # test all keys (GitHub: Actions -> Setup check)
   python pipeline.py review             # apply ✅/❌ presses from Telegram (run every hour)
 """
 from __future__ import annotations
@@ -99,11 +100,14 @@ def review() -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("command", choices=["produce", "review"])
+    ap.add_argument("command", choices=["produce", "review", "check"])
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--no-upload", action="store_true")
     a = ap.parse_args()
     try:
+        if a.command == "check":
+            from lm.check import run_check
+            raise SystemExit(0 if run_check() else 1)
         if a.command == "produce":
             produce(a.dry_run, upload=not a.no_upload)
         else:
