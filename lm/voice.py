@@ -34,6 +34,31 @@ def _gtts(text: str, out: Path) -> None:
 
 
 def _free(text: str, out: Path, v: dict) -> None:
+    """Split into short pieces (edge-tts fails more on long texts), voice each, then join."""
+    import re
+    text = _clean(text)
+    parts, cur = [], ""
+    for sent in re.split(r"(?<=[.!?])\s+", text):
+        if cur and len(cur) + len(sent) > 220:
+            parts.append(cur)
+            cur = sent
+        else:
+            cur = f"{cur} {sent}".strip()
+    if cur:
+        parts.append(cur)
+    if len(parts) <= 1:
+        return _free_one(text, out, v)
+    files = []
+    for i, ptxt in enumerate(parts):
+        f = out.with_name(f"{out.stem}_p{i}.mp3")
+        _free_one(ptxt, f, v)
+        files.append(f)
+    lst = out.with_name(f"{out.stem}_parts.txt")
+    lst.write_text("".join(f"file '{f.name}'\n" for f in files))
+    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c:a", "libmp3lame", "-b:a", "160k", str(out)])
+
+
+def _free_one(text: str, out: Path, v: dict) -> None:
     """edge-tts with retries and a backup voice, then Google TTS as last resort."""
     import time
     text = _clean(text)
